@@ -1,0 +1,538 @@
+openapi: 3.0.3
+
+info:
+  title: "Faceswap api"
+  version: "1.0.0"
+  description: "API to change faces in photos and videos
+          'Servers doman is not correct, please change to your' "
+  contact:
+    name: "Energise"
+    url: "https://energise.pro/"
+    
+    
+servers:
+  - url: "https://api.example.com"
+  
+  
+tags:
+  - name: "face_swap"
+  - name: "face_get"
+  - name: "queue"
+  - name: "templates"
+  
+  
+paths:
+  /check/faces:
+      post:
+        summary: Check if an image contains faces
+        description: "This endpoint allows users to check is there faces in image. You just need to put image in base64 format in the request"
+        operationId: CheckImage
+        tags:
+          - "face_swap"
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  image:
+                    format: base64
+                    type: string
+                    example: GJHJKHjKHKJ325vfsD5...
+                    description: Base64 encoded image data
+        responses:
+          '200':
+            description: Successful response
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    faces:
+                      type: integer
+                      example: 1
+                      description: Number of faces detected in the image
+          '500':
+            description: Internal server error
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    error:
+                      type: string
+                      description: Error message
+
+  /face_swap:
+    post:
+      summary: "Perform face swap"
+      description: "This endpoint allows users to submit images for face swapping."
+      operationId: SwapFace
+      tags:
+          - "face_swap"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+              
+                typeReq:
+                  type: string
+                  description: Type of request that you want (e.g., "swap") now accessed only "swap". you can skip its won`t change anything, default - true
+                  example: "swap"
+                  
+                template_id:
+                  type: integer
+                  description: ID of the template (video/image) to use to swap faces on him (e.g., 142). Template must be preuploaded, you can do it using POST template/add/ request which will return you number of template to insert here.
+                  example: 18
+                  
+                watermark:
+                  type: boolean
+                  description: Get true or false to understand to set watermark on video or not. Default - true
+                  example: true
+                  
+                faceFrom:
+                  type: array
+                  items:
+                    type: string
+                    format: base64
+                    example: "'sgssdgdfq232x5c...', 'GJHJKHjKHKJ325vfsD5...', ..."
+                    description: Base64 encoded images of faces to swap from in a sequence corresponding to the faces from "faceTo"
+                    
+                faceTo:
+                  type: array
+                  items:
+                    type: string
+                    format: base64
+                    example: "'GJHJKHjKHKJ325vfsD5...', 'sgssdgdfq232x5c...', ..."
+                    description: Base64 encoded images of faces to swap to in a sequence corresponding to the faces from :"faceFrom"
+                    
+              required:
+                - template_id
+                - faceFrom
+                - faceTo
+                
+                
+      responses:
+        '200':
+          description: Successful response the task go to the rebbit queue.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                
+                  task_id:
+                    type: string
+                    description: unique ID of the created face swapping task created by uuid library
+                    example: jhfhdIOFYTuifuH7YF8789t3Fjsf...
+
+                    
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message
+                    
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message
+          
+  /queue_status/swapface:
+    get:
+      summary: "Get queue status of the face swap tasks"
+      description: "This endpoint retrieves information about the current status of face swap tasks in the queue."
+      operationId: getQueueStatusSwapFace
+      tags:
+          - "queue"
+          - "face_swap"
+      responses:
+        '200':
+          description: "Successful response"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                
+                  message_count:
+                    type: integer
+                    description: Number of tasks in the queue
+                    example: 0
+                    default: 0
+                    
+                  messages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                      
+                        request_id:
+                          type: string
+                          description: unique task ID of the associated face swap that gives you while you post /faceswap/
+                          example: jhfhdIOFYTuifuH7YF8789t3Fjsf...
+                          
+                        input:
+                          type: object
+                          properties:
+                          
+                            template_id:
+                              type: integer
+                              description: ID of the used template (image/video) to change
+                            decoded_image:
+                              type: string
+                              description: Path to the decoded images folder "faceFrom", "faceTo" from task 
+                              example: ./data/images/jhfhdIOFYTuifuH7YF8789t3Fjsf.../
+                              
+                            watermark:
+                              type: boolean
+                              description: Applied watermark
+                              example: true
+                              default: true
+                              
+                            new:
+                              type: boolean
+                              description: Indicates if its a new user or not
+                              example: true
+                              default: true
+                              
+                            is_image:
+                              type: boolean
+                              description: Indicates if the input template is an image
+                              example: true
+                              default: true
+                              
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message
+
+  /queue_status/getface:
+      get:
+        summary: "Get queue status for face detection tasks"
+        description: "This endpoint retrieves information about the current status of face getting tasks in the queue."
+        operationId: getQueueStatusGetFace
+        tags:
+          - "face_get"
+          - "queue"
+        responses:
+          '200':
+            description: Successful response
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                  
+                    message_count:
+                      type: integer
+                      description: Number of tasks in the queue
+                      example: 0
+                      default: 0
+                      
+                    messages:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          input:
+                            type: object
+                            
+                            properties:
+                              template_id:
+                                type: integer
+                                description: template ID of the uploaded template for getting face.
+                                example: 18
+                                
+                              decoded_image:
+                                type: string
+                                description: Path to the future decoded image(s)
+                                example: ./data/images/jhfhdIOFYTuifuH7YF8789t3Fjsf.../
+                                
+                              new:
+                                type: boolean
+                                description: Indicates if its a new customer
+                                example: true
+                                default: true
+                                
+                              is_image:
+                                type: boolean
+                                description: Indicates if the input is an image
+                                example: true
+                                default: true
+                                
+          '500':
+            description: Internal server error
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    error:
+                      type: string
+                      description: Error message
+
+  /face_swap/result:
+      get:
+        summary: "Get the result of a face swap task"
+        description: "This endpoint retrieves the result of a face swap task identified by its task ID."
+        operationId: faceSwapResult
+        tags:
+          - "face_swap"
+        parameters:
+          - name: "request_id"
+            in: query
+            required: true
+            description: "unique ID of the face swap task that you get while POST /faceswap/ request by the name 'task_id' and its looks like jhfhdIOFYTuifuH7YF8789t3Fjsf..."
+            schema:
+              type: string
+              
+        responses:
+          '200':
+            description: Successful response
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    input:
+                      type: object
+                      description: Information about the request that generated the result
+                      properties:
+                        template_id:
+                          type: integer
+                          description: ID of the template (video/image) to use to swap faces on him (e.g., 18). Template must be preuploaded, you can do it using POST template/add/ request which will return you number of template to insert here.
+                          example: 18
+                          
+                        decoded_image:
+                          type: string
+                          description: Path to the decoded images that you send as "faceFrom" and "faceTo" on server.
+                          example: ./data/images/jhfhdIOFYTuifuH7YF8789t3Fjsf.../
+                          
+                        watermark:
+                          type: boolean
+                          description: Applied watermark on result
+                          example: true
+                          default: true
+                          
+                        new:
+                          type: boolean
+                          description: Indicates if its a new user
+                          example: true
+                          default: true
+                          
+                        is_image:
+                          type: boolean
+                          description: Indicates if the input tepmlate was an image
+                          example: true
+                          default: true
+                          
+                    status:
+                      type: string
+                      description: Current status of the task. Could be "in_queue" if its in wait in queue, "in_work" if working on it now in progress, "done" if its completely done and "canceled by (some error)" if get error while trying.
+                      example: "in_work"
+                      
+                    output:
+                      type: object
+                      description: Information about the output
+                      properties:
+                      
+                        template_id:
+                          type: integer
+                          description: ID of the input template
+                          example: 18
+                          
+                        premium:
+                          type: boolean
+                          description: Indicates if the task was processed as premium
+                          example: true
+                          
+                        source:
+                          type: string
+                          description: Path to the resulted output fileon server which you can use to download output file. You can download through cdn by adding (your_cdn_domen_where_you_upload + this_source_file_path)
+                          example: ./data/result/GJHJKHjKHKJ325vfsD5.../18.mp4
+                          
+          '400':
+            description: Bad request
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    error:
+                      type: string
+                      description: "Error message (e.g., invalid request ID format)"
+                      
+          '404':
+            description: Not found
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    error:
+                      type: string
+                      description: "No results found for this request ID"
+
+  /face_get/result:
+    get:
+      summary: "Get the faces detected in a template"
+      description: "This endpoint retrieves the detected faces associated with a given template ID."
+      operationId: getFaceGetterResult
+      tags:
+          - "face_get"
+      parameters:
+        - name: template_id
+          in: query
+          required: true
+          description: ID number of the template containing the detected faces like 18
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  output:
+                    type: object
+                    properties:
+                    
+                      template_id:
+                        type: integer
+                        description: template ID that you can use to identified.
+                        example: 18
+                        
+                      face_sources:
+                        type: array
+                        items:
+                          type: string
+                          description: Array with pathes to the files of the detected unique faces from template.
+                        example: [./data/images/jhfhdIOFYTuifuH7YF8789t3Fjsf.../1.png, ./data/images/jfsdkflsdjfkjdslkud922.../2.png]
+
+
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: "Error message (e.g., missing template ID)"
+                    
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: "No results found for this template ID"
+ 
+ 
+  /template/add:
+    post:
+      summary: "Create a new template"
+      description: "This endpoint creates a new template with image or video, and categories, and triggers a task to perform unique face getting and face swapping."
+      operationId: addTemplates
+      tags:
+          - "face_get"
+          - "templates"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+              
+                file:
+                  type: object
+                  format: binary
+                  description: Image or video file for the template (must be one of them image/video, could be optional)
+                  
+                thumb:
+                  type: object
+                  format: binary
+                  description: Thumb file. Saved but not used now (optional)
+                  
+                preview_source:
+                  type: object
+                  format: binary
+                  description: Preview source file, saved but not used (optional)
+                  
+                premium:
+                  type: boolean
+                  description: Indicates if the customer is premium
+                  example: false
+                  default: false
+                  
+                categories:
+                  type: array
+                  description: array of IDs of categories associated with the template
+                  example: [0, 1, 3]
+                    
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    description: Current status of the task. If it goes good return status "in_queue_get_face" which means that images of unique faces from video start extraxting.
+                    example: "in_queue_get_face"
+                  request_id:
+                    type: integer
+                    description: ID of the uploaded template whick you can use next in /faceswap/
+                    example: 18
+                    
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message (e.g., missing file, invalid data)
+                    
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message (e.g., feature not implemented, unexpected errors)

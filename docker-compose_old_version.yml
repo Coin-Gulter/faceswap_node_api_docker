@@ -1,0 +1,45 @@
+version: '3'
+services:
+  test:
+    image: nvidia/cuda:12.3.1-base-ubuntu20.04
+    command: nvidia-smi
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+
+  rabbitmq:
+    image: "rabbitmq:3-management"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${rabbit_user}
+      RABBITMQ_DEFAULT_PASS: ${rabbit_pass}
+
+  face_swap_backend:
+    image: coingualter/face_swap_backend:1.1
+    ports: 
+      - "${port}:8000"
+    volumes:
+      - ${data_path}:/var/
+    environment:
+      data_path: /var/
+      NVIDIA_VISIBLE_DEVICES: all
+    depends_on:
+      - rabbitmq
+
+  swap_service:
+    image: coingualter/swap_service:1.1
+    volumes:
+      - ${data_path}:/var/
+    environment:
+      data_path: /var/
+      NVIDIA_VISIBLE_DEVICES: all
+    depends_on:
+      - face_swap_backend
+
+  get_face_service:
+    image: coingualter/get_face_service:1.1
+    volumes:
+      - ${data_path}:/var/
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      data_path: /var/
+    depends_on:
+      - face_swap_backend
